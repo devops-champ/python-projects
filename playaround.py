@@ -40,4 +40,12 @@ def backup_config(ssh_client):
         logging.info(f"Backup of {remote_path} saved to {backup_path}")
         sftp.close()
     except Exception as error:
-        logging.error(f"Error during backup: {error}")        
+        logging.error(f"Error during backup: {error}")  
+
+
+        # stdin, stdout, stderr = ssh_client.exec_command(f"sudo mv {temp_path} {remote_server_path}", get_pty=True)
+        # stderr_output = stderr.read().decode()
+        # if stderr_output:
+        #     logging.error(f"Error moving or reloading NGINX {stderr_output}")
+        # else:
+        #     logging.info(f"NGINX config updated {remote_server_path}")                  

@@ -1,8 +1,8 @@
 import paramiko
 import yaml
-import os
 import logging
 from datetime import datetime
+import time
 
 
 def date_time():
@@ -27,24 +27,27 @@ def ssh_connect():
             key_filename=server["private_key"]
         )
         print("SSH connection established")
+        return ssh
 
     except Exception as error:
         print(error)
 
-def backup_config(ssh_connect):
+def backup_config(ssh_client):
     try:
+        config = load_yaml()
+        server = config["server"]             
         backup_dir = "/home/ubuntu/backup"
-        config_file = "/etc/nginx/nginx.conf"
-        date_time = date_time()
-        backup_path = f"{backup_dir}/{date_time}_nginx.conf.bak"
+        config_file = server["config_file"]
+        timedate = date_time()
+        backup_path = f"{backup_dir}/{timedate}_nginx.conf.bak"
 
-        stdin, stdout, stderr = ssh_connect.exec_command(f"mkdir -p {backup_dir}")
+        stdin, stdout, stderr = ssh_client.exec_command(f"mkdir -p {backup_dir}")
         stderr_output = stderr.read().decode()
         if stderr_output:
             logging.error(f"Error creating backup directory: {stderr_output}")
             return
         
-        stdin, stdout, stderr = ssh_connect.exec_command(f"cp {config_file} {backup_path}")
+        stdin, stdout, stderr = ssh_client.exec_command(f"cp {config_file} {backup_path}")
         stderr_output = stderr.read().decode()
         if stderr_output:
             logging.error(f"Error during backup: {stderr_output}")
@@ -55,7 +58,45 @@ def backup_config(ssh_connect):
     except Exception as error:
         logging.error(f"Error during backup: {error}")
 
+def update_config(ssh_client):
+    try:
+        config = load_yaml()
+        server = config["server"]          
+        local_path = "nginx.conf"    
+        remote_server_path = server["config_file"]
+        sftp = ssh_client.open_sftp()       
+        try:
+            sftp.put(local_path, remote_server_path)
+            logging.info(f"Config file from {local_path} copied to {remote_server_path}")
+        except Exception as e:
+            logging.error(f"File upload failed: {e}")    
+        sftp.close()
+        time.sleep(2)
+
+    except Exception as error:
+        print(error) 
+
+def restart_nginx(ssh_client):
+    try:
+        stdin, stdout, stderr = ssh_client.exec_command("sudo systemctl restart nginx")
+        stderr_output = stderr.read().decode()
+        if stderr_output:
+            logging.error(f"Error restarting service: {stderr_output}")
+        else:
+            logging.info(f"Service restarted successfully: {stderr_output}")
+
+    except Exception as error:
+        print(error) 
+
+
+
+
+
+
 logging.basicConfig(level=logging.INFO)
 
-ssh_connect()
-
+ssh_client = ssh_connect()
+if ssh_client:
+    backup_config(ssh_client)
+    update_config(ssh_client)
+    ssh_client.close()

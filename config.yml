@@ -1,6 +1,5 @@
 server:
-  host: 54.159.137.198
+  host: 44.201.180.252
   user: ubuntu
   private_key: ../../Downloads/ngnix.pem
   config_file: /etc/nginx/nginx.conf
-  restart_command: sudo systemctl restart nginx
